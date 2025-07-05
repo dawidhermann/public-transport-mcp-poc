@@ -74,8 +74,8 @@ services:
       - PYTHONPATH=/app
     volumes:
       - ./beam-pipelines:/app/pipelines
-      - ./beam-data:/app/data
-      - ./requirements.txt:/app/requirements.txt
+      - ./beam-pipelines/beam-data:/app/data
+      - ./beam-pipelines/requirements.txt:/app/requirements.txt
     working_dir: /app
     networks:
       - transport-network
