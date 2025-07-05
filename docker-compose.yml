@@ -1,0 +1,128 @@
+version: "3.8"
+
+services:
+  # PostGIS Database
+  postgis:
+    platform: linux/amd64
+    image: postgis/postgis:17-3.5
+    container_name: postgis-db
+    environment:
+      POSTGRES_DB: transport_db
+      POSTGRES_USER: transport_user
+      POSTGRES_PASSWORD: transport_pass
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgis_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    networks:
+      - transport-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U transport_user -d transport_db"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Neo4j Graph Database
+  neo4j:
+    platform: linux/amd64
+    image: neo4j:5.26-community
+    container_name: neo4j-db
+    environment:
+      NEO4J_AUTH: neo4j/transport_pass
+      NEO4J_PLUGINS: '["apoc", "graph-data-science"]'
+      NEO4J_dbms_security_procedures_unrestricted: gds.*,apoc.*
+      NEO4J_dbms_security_procedures_allowlist: gds.*,apoc.*
+      NEO4J_apoc_export_file_enabled: true
+      NEO4J_apoc_import_file_enabled: true
+      NEO4J_apoc_import_file_use__neo4j__config: true
+    ports:
+      - "7474:7474" # HTTP
+      - "7687:7687" # Bolt
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+      - neo4j_import:/var/lib/neo4j/import
+      - neo4j_plugins:/plugins
+    networks:
+      - transport-network
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "cypher-shell",
+          "-u",
+          "neo4j",
+          "-p",
+          "transport_pass",
+          "RETURN 1",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Apache Beam Python 3.12 SDK
+  beam-python:
+    platform: linux/amd64
+    image: apache/beam_python3.9_sdk
+    container_name: beam-python-sdk
+    entrypoint: ""
+    environment:
+      - PYTHONPATH=/app
+    volumes:
+      - ./beam-pipelines:/app/pipelines
+      - ./beam-data:/app/data
+      - ./requirements.txt:/app/requirements.txt
+    working_dir: /app
+    networks:
+      - transport-network
+    depends_on:
+      postgis:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+    command: >
+      sh -c "
+        pip install --upgrade pip --root-user-action=ignore &&
+        pip install -r requirements.txt --root-user-action=ignore &&
+        python -m pipelines.transport_pipeline --runner=DirectRunner --project=transport-project --save_main_session
+      "
+    ports:
+      - "8888:8888" # Jupyter notebook for interactive development
+    restart: on-failure
+
+  # Optional: Jupyter Lab for development
+  # jupyter-lab:
+  #   image: jupyter/datascience-notebook:python-3.11.6
+  #   container_name: jupyter-lab
+  #   environment:
+  #     JUPYTER_ENABLE_LAB: yes
+  #     JUPYTER_TOKEN: transport_token
+  #   ports:
+  #     - "8889:8888"
+  #   volumes:
+  #     - ./notebooks:/home/jovyan/work
+  #     - ./beam-pipelines:/home/jovyan/work/pipelines
+  #     - ./beam-data:/home/jovyan/work/data
+  #   networks:
+  #     - transport-network
+  #   restart: unless-stopped
+
+volumes:
+  postgis_data:
+    driver: local
+  neo4j_data:
+    driver: local
+  neo4j_logs:
+    driver: local
+  neo4j_import:
+    driver: local
+  neo4j_plugins:
+    driver: local
+
+networks:
+  transport-network:
+    driver: bridge
