@@ -416,3 +416,6 @@ _templates/
 
 public-transport-mcp-poc
 beam-data
+**/.venv
+**/bin
+**/share

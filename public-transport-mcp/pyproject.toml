@@ -1,0 +1,14 @@
+[project]
+name = "public-transport-mcp"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13.3"
+dependencies = [
+    "asyncpg",
+    "dotenv>=0.9.9",
+    "fastmcp>=2.10.1",
+    "googlemaps>=4.10.0",
+    "neo4j>=5.28.1",
+    "psycopg2-binary>=2.9.10",
+]

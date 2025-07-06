@@ -76,7 +76,7 @@ def transform_stop_data(element):
         # Add geospatial point
         if stop_data["stop_lat"] and stop_data["stop_lon"]:
             stop_data["geom"] = (
-                f"POINT({stop_data['stop_lon']} {stop_data['stop_lat']})"
+                f"POINT({stop_data['stop_lat']} {stop_data['stop_lon']})"
             )
 
         return stop_data
@@ -413,24 +413,24 @@ def run_pipeline(input_file: str = None):
     with beam.Pipeline(options=pipeline_options) as pipeline:
 
         # Create pipeline
-        # stops_data = (
-        #     pipeline
-        #     | "Create Sample Data"
-        #     >> ReadFromCsv(
-        #         "data/stops.csv",
-        #         header=0,
-        #     )
-        #     | "Convert to Dict" >> beam.Map(lambda row: row._asdict())
-        #     | "Transform Stop Data" >> beam.Map(transform_stop_data)
-        # )
+        stops_data = (
+            pipeline
+            | "Create Sample Data"
+            >> ReadFromCsv(
+                "data/stops.csv",
+                header=0,
+            )
+            | "Convert to Dict" >> beam.Map(lambda row: row._asdict())
+            | "Transform Stop Data" >> beam.Map(transform_stop_data)
+        )
 
         # # Transform stop times data
-        stop_times_data = (
-            pipeline
-            | "Read Stop Times Data" >> ReadFromCsv("data/stop_times.csv", header=0)
-            | "Convert to Dict" >> beam.Map(lambda row: row._asdict())
-            | "Transform Stop Times Data" >> beam.Map(transform_stop_times_data)
-        )
+        # stop_times_data = (
+        #     pipeline
+        #     | "Read Stop Times Data" >> ReadFromCsv("data/stop_times.csv", header=0)
+        #     | "Convert to Dict" >> beam.Map(lambda row: row._asdict())
+        #     | "Transform Stop Times Data" >> beam.Map(transform_stop_times_data)
+        # )
 
         # # Transform routes data
         # routes_data = (
@@ -453,16 +453,16 @@ def run_pipeline(input_file: str = None):
         # )
 
         # Write to PostGIS
-        # (stops_data | "Write to PostGIS" >> beam.ParDo(WriteToPostGIS()))
+        (stops_data | "Write to PostGIS" >> beam.ParDo(WriteToPostGIS()))
 
         # # Write to Neo4j
         # (stops_data | "Write to Neo4j" >> beam.ParDo(WriteToNeo4j()))
         # (trips_data | "Write to Neo4j" >> beam.ParDo(WriteTripsToNeo4j()))
-        (
-            stop_times_data
-            | "Batching" >> beam.BatchElements(min_batch_size=100, max_batch_size=1000)
-            | "Write Stop Times to Neo4j" >> beam.ParDo(WriteStopTimesDataToNeo4j())
-        )
+        # (
+        #     stop_times_data
+        #     | "Batching" >> beam.BatchElements(min_batch_size=100, max_batch_size=1000)
+        #     | "Write Stop Times to Neo4j" >> beam.ParDo(WriteStopTimesDataToNeo4j())
+        # )
         # (routes_data | "Write Routes to Neo4j" >> beam.ParDo(WriteRoutesToNeo4j()))
 
 
