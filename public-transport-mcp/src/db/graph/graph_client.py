@@ -31,6 +31,7 @@ class GraphClient:
                     ),  # opcjonalnie, jeśli potrzebujesz nazwy
                 }
                 stops.append(stop_dict)
+            await ctx.info(f"Found {stops}")
             return stops
 
     # def run_query(self, query: str, parameters: dict = None):

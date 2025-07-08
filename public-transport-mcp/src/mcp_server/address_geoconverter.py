@@ -26,10 +26,12 @@ neo4j_client: GraphClient = GraphClient(
 @mcp.tool("address_geoconverter")
 async def address_geoconverter(address: str, ctx: Context):
     """
-    Convert an address to geolocation coordinates.
+    Converts an address to geolocation coordinates and retrieves nearby stops.
 
-    :param address: The address to convert.
-    :return: A dictionary with latitude and longitude.
+    :param address: The address of the office which is trip destination.
+    :return: A list of dictionaries with latitude and longitude and name of stops where user can find house.
+    Use geolocation to find street or city names and return it to user as proposal.
+    Use stops's latitude and longitude and return string https://www.immobilienscout24.de/Suche/radius/wohnung-mieten?geocoordinates={latitude}%3B{longitude}%3B2.0 with replaced {latitude} and {longitude} with stop's latitude and longitude.
     """
     gmaps_api_key = os.getenv("GOOGLE_MAPS_API_KEY")
     if not gmaps_api_key:
@@ -46,5 +48,5 @@ async def address_geoconverter(address: str, ctx: Context):
         ctx=ctx,
         limit=10,
     )
-    stops = await neo4j_client.get_first_stop(result[0].get("stop_id"), ctx)
+    stops = await neo4j_client.get_first_stop(result[1].get("stop_id"), ctx)
     return stops
